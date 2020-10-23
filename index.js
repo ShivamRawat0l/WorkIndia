@@ -4,7 +4,9 @@ var result= require('dotenv').config()
 var app= express()
 var bodyParser = require('body-parser')
 const bcrypt = require('bcrypt');
-const crypto = require('crypto');
+
+const {encrypt,decrypt}  =require('./crypt.js')
+
 
 //MIDDLE WARE
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -24,40 +26,20 @@ connection.connect(function(err){
 })
 
 
-function encrypt(text,key){
-  var cipher = crypto.createCipher('aes-256-cbc',key)
-  var crypted = cipher.update(text,'utf8','hex')
-  crypted += cipher.final('hex');
-  return crypted;
-}
-
-function decrypt(text,key){
-  var decipher = crypto.createDecipher('aes-256-cbc',key)
-  var dec = decipher.update(text,'hex','utf8')
-  dec += decipher.final('utf8');
-  return dec;
-}
-
-
-app.get('/',function(req,res){
-	res.sendfile('./index.html');
-})
-
-
 app.post('/app/user',(req,res)=>{
-	console.log(req.body)
-	
 	bcrypt.hash(req.body.password,10,function(err,hash){
 		connection.query("insert into user (username,password) values (?)",[[req.body.username,hash]], function (err, rows, fields) {
   				if (err) {
+  					if(err.errno==1062){
+  						res.send({'status':'username already exist'})
+  					}
   					throw err;
-  					res.send("Error Occured");
   				}
-				res.send("account created");
+				res.send({'status':"account created"});
 		})
 	})	
 })
-
+ 
 app.post('/app/user/auth',(req,res)=>{
 	console.log(req.body)
 	connection.query("select password from user where username= ?",[req.body.username], function (err, rows, fields) {
@@ -74,7 +56,7 @@ app.post('/app/user/auth',(req,res)=>{
   				})
     		}
     		else{
-    			res.json({'status':'Wrong password'});
+    			res.json({'status':'wrong username or password'});
     		}
 	});
 	}
@@ -97,21 +79,26 @@ app.get('/app/sites/list',(req,res)=>{
 		})
 	})
 })
+
+
 app.post('/app/sites',(req,res)=>{
 	connection.query("select username from user where userId= ?",[req.query.user],function(err,rows,fields){
 		if(err)
 			throw err;
-		console.log(rows)
-		var cryptedText= encrypt(req.body.note,rows[0]['username'])
-		console.log(cryptedText)
+		if(rows.length >0){
+			var cryptedText= encrypt(req.body.note,rows[0]['username'])
+		
 			connection.query("insert into notes values (?)",[[req.query.user,cryptedText]],function(err,rows1,fields){
 				if(err) 
 					throw err;
 
 				res.json({'status':'success'});
 			})
-		})
-		
+		}
+		else{
+			res.json({'status':'User does not exist'})
+		}
+	})	
 })
 
 app.listen(3000);
