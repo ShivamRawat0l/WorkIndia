@@ -8,12 +8,12 @@ const bcrypt = require('bcrypt');
 const {encrypt,decrypt}  =require('./crypt.js')
 
 
-//MIDDLE WARE
+//Middlewares
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 
-
+//Data base connections
 var connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
@@ -85,20 +85,31 @@ app.post('/app/sites',(req,res)=>{
 	connection.query("select username from user where userId= ?",[req.query.user],function(err,rows,fields){
 		if(err)
 			throw err;
+
 		if(rows.length >0){
-			var cryptedText= encrypt(req.body.note,rows[0]['username'])
+			if(req.body.username==rows[0]['username']){
+				var cryptedText= encrypt(req.body.note,rows[0]['username'])
 		
-			connection.query("insert into notes values (?)",[[req.query.user,cryptedText]],function(err,rows1,fields){
+				connection.query("insert into notes values (?)",[[req.query.user,cryptedText]],function(err,rows1,fields){
 				if(err) 
 					throw err;
 
-				res.json({'status':'success'});
-			})
+					res.json({'status':'success'});
+				})
+			}
+			else{
+				res.send({'status':'send your username in the post request'})
+			}
+			
 		}
 		else{
 			res.json({'status':'User does not exist'})
 		}
 	})	
 })
+
+
+
+
 
 app.listen(3000);
