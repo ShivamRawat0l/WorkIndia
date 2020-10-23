@@ -1,5 +1,12 @@
 # WorkIndia
-## Installation 
+
+## PREREQUISITES
+- MySql Server 
+
+
+## Installation
+- Open index.js and change the values to connect to the server
+
 - npm install
 
 - npm start
